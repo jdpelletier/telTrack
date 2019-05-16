@@ -2,23 +2,70 @@ import ktl
 import time
 import sys
 import select
+import matplotlib.pyplot as plt
+import csv
 
 eerr = ktl.cache("dcs", "elpe")
 aerr = ktl.cache("dcs", "azpe")
 eerr.monitor()
 aerr.monitor()
-response = '(Type w and enter to mark as windshake)\a'
+x = []
+y = []
+
+trackOutFile = open('trackingout.txt', 'w+')
+ts = time.time()
+
+def trackOutput(ee, ae, wind):
+    etime = time.time() - ts
+    if wind == True:
+        trackOutFile.write('%f, %f, %s, Windshake\n' % (ee, aa, etime))
+    else:
+        trackOutFile.write('%f, %f, %s\n' % (ee, aa, etime))
+
+def trackPlot():
+    with open('trackingout.txt','r') as csvfile:
+        plots = csv.reader(csvfile, delimiter=',')
+        for row in plots:
+            x.append(float(row[2]))
+            y.append(float(row[0]))
+    plt.plot(x,y, label='El Errors')
+    with open('trackingout.txt','r') as csvfile:
+        plots = csv.reader(csvfile, delimiter=',')
+        for row in plots:
+            x.append(float(row[2]))
+            y.append(float(row[1]))
+    plt.plot(x,y, label='Az Errors')
+    plt.xlabel('Time')
+    plt.ylabel('Errors')
+    plt.title('Telescope Tracking Errors')
+    plt.legend()
+    plt.show()
+
 
 try:
     while True:
-        print("%f, %f" % (eerr, aerr))
-        if(abs(eerr) < 0.5 or abs(aerr) < -1):
+        wind = False
+        response = '(Type w and enter to mark as windshake)\a'
+        while(abs(eerr) > 0.5 or abs(aerr) > 0.5):
+            print("\n%f, %f" % (eerr, aerr))
+            trackOutput(eerr, aerr, wind)
             print("Tracking errors are high! %s" % response)
+            sys.stdout.write('>')
+            sys.stdout.flush()
             i, o, e = select.select([sys.stdin], [], [], 2)
             if (i):
                 if sys.stdin.readline().strip() == 'w':
-                    response = '(Marked as windshake)'
-        else:
-            time.sleep(2)
+                    wind = True
+                    response = '(Marked as windshake, hit enter if not windshake)'
+                else:
+                    wind = False
+                    response = '(Type w and enter to mark as windshake)'
+        time.sleep(2)
+
 except KeyboardInterrupt:
-    pass
+    trackOutFile.close()
+    yesno = str(raw_input('\nDo you want to display plot? '))
+    if yesno in ['yes', 'Yes', 'YES', 'Y', 'y']:
+        trackPlot()
+    else:
+        print('not plotted')
