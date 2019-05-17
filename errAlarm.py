@@ -11,6 +11,7 @@ eerr.monitor()
 aerr.monitor()
 x = []
 y = []
+z = []
 
 trackOutFile = open('trackingout.txt', 'w+')
 ts = time.time()
@@ -18,27 +19,32 @@ ts = time.time()
 def trackOutput(ee, ae, wind):
     etime = time.time() - ts
     if wind == True:
-        trackOutFile.write('%f, %f, %s, Windshake\n' % (ee, aa, etime))
+        trackOutFile.write('%f, %f, %s, Windshake\n' % (ee, ae, etime))
     else:
-        trackOutFile.write('%f, %f, %s\n' % (ee, aa, etime))
+        trackOutFile.write('%f, %f, %s\n' % (ee, ae, etime))
 
 def trackPlot():
-    with open('trackingout.txt','r') as csvfile:
+    infile = open('trackingout.txt','r')
+    with infile as csvfile:
         plots = csv.reader(csvfile, delimiter=',')
         for row in plots:
             x.append(float(row[2]))
             y.append(float(row[0]))
-    plt.plot(x,y, label='El Errors')
-    with open('trackingout.txt','r') as csvfile:
-        plots = csv.reader(csvfile, delimiter=',')
-        for row in plots:
-            x.append(float(row[2]))
-            y.append(float(row[1]))
-    plt.plot(x,y, label='Az Errors')
+            z.append(float(row[1]))
+
+    plt.subplot(2, 1, 1)
+    plt.plot(x, y, '.')
+
+    plt.ylabel('Errors')
+    plt.title('El Errors')
+
+    plt.subplot(2, 1, 2)
+    plt.plot(x, z, '.')
+
     plt.xlabel('Time')
     plt.ylabel('Errors')
-    plt.title('Telescope Tracking Errors')
-    plt.legend()
+    plt.title('Az Errors')
+
     plt.show()
 
 
