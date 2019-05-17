@@ -7,8 +7,11 @@ import csv
 
 eerr = ktl.cache("dcs", "elpe")
 aerr = ktl.cache("dcs", "azpe")
+telmove = ktl.cache("dcs", "movetel")
 eerr.monitor()
 aerr.monitor()
+telmove.monitor()
+
 x = []
 y = []
 z = []
@@ -16,6 +19,7 @@ z = []
 trackOutFile = open('trackingout.txt', 'w+')
 ts = time.time()
 
+#write to file function
 def trackOutput(ee, ae, wind):
     etime = time.time() - ts
     if wind == True:
@@ -23,6 +27,7 @@ def trackOutput(ee, ae, wind):
     else:
         trackOutFile.write('%f, %f, %s\n' % (ee, ae, etime))
 
+#plotting function
 def trackPlot():
     infile = open('trackingout.txt','r')
     with infile as csvfile:
@@ -47,25 +52,29 @@ def trackPlot():
 
     plt.show()
 
-
+#main function
 try:
     while True:
         wind = False
         response = '(Type w and enter to mark as windshake)\a'
         while(abs(eerr) > 0.5 or abs(aerr) > 0.5):
-            print("\n%f, %f" % (eerr, aerr))
-            trackOutput(eerr, aerr, wind)
-            print("Tracking errors are high! %s" % response)
-            sys.stdout.write('>')
-            sys.stdout.flush()
-            i, o, e = select.select([sys.stdin], [], [], 2)
-            if (i):
-                if sys.stdin.readline().strip() == 'w':
-                    wind = True
-                    response = '(Marked as windshake, hit enter if not windshake)'
-                else:
-                    wind = False
-                    response = '(Type w and enter to mark as windshake)'
+            if telmove == 'true':
+                print("Telescope moving")
+                time.sleep(2)
+            else:
+                print("\n%f, %f" % (eerr, aerr))
+                trackOutput(eerr, aerr, wind)
+                print("Tracking errors are high! %s" % response)
+                sys.stdout.write('> ')
+                sys.stdout.flush()
+                i, o, e = select.select([sys.stdin], [], [], 2)
+                if (i):
+                    if sys.stdin.readline().strip() == 'w':
+                        wind = True
+                        response = '(Marked as windshake, hit enter if not windshake)'
+                    else:
+                        wind = False
+                        response = '(Type w and enter to mark as windshake)'
         time.sleep(2)
 
 except KeyboardInterrupt:
