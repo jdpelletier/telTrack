@@ -2,7 +2,7 @@ import os
 import matplotlib.pyplot as plt 
 import csv 
 
-efile = open('EFiles/envAutK1.arM', 'r')
+efile = open('../EFiles/envAutK1.arM', 'r')
 ofile = open('output.txt', 'w+')
 
 i = 0
@@ -23,5 +23,3 @@ with efile as infile, ofile as outfile:
 
 plt.plot(c, ee, '.')
 plt.show()
-
-os.remove('output.txt')
