@@ -27,14 +27,14 @@ def main():
             ta[i] = time.time() - ts
             aa[i] = abs(azs - az)
             dsa[i] = azd/tf
-            print("Slewed %f at %f d/s.", % (aa[i], dsa[i]))
-            slewOutFile.write('%f, %f, %f', % (aa[i], ta[i], dsa[i]))
+            print("Slewed %f at %f d/s." % (aa[i], dsa[i]))
+            slewOutFile.write('%f, %f, %f' % (aa[i], ta[i], dsa[i]))
             i += 1
 
     except KeyboardInterrupt:
         slewOutFile.close()
         dsAverage = np.mean(dsa)
-        print("Slewed at an average of %f during tonight.", % dsAverage)
+        print("Slewed at an average of %f during tonight." % dsAverage)
         plt.plot(aa, ta)
         plt.ylabel("Time of slew")
         plt.xlabel("Az distance slewed")
