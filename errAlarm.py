@@ -53,8 +53,8 @@ def trackPlot():
             a.append(float(row[3]))
             t.append(float(row[4]))
             try: 
-                ws.append(float(row[5])
-                wd.append(float(row[6])
+                ws.append(float(row[5]))
+                wd.append(float(row[6]))
             except IndexError:
                 pass
 

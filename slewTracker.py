@@ -15,6 +15,7 @@ i = 0
 slewOutFile = open('slewOutFile.txt', 'w+')
 
 def main():
+    global i
     try:
         while True:
             print("Tracking slew times.")
@@ -23,10 +24,10 @@ def main():
             ts = time.time()
             azs = az
             print("Telescope slewing")
-            telstate.waitFor("=='TRACKING'")
-            ta[i] = time.time() - ts
-            aa[i] = abs(azs - az)
-            dsa[i] = azd/tf
+            telstate.waitFor("=='TRACK'")
+            ta.append(time.time() - ts)
+            aa.append(abs(azs - az))
+            dsa.append(aa[i]/ta[i])
             print("Slewed %f at %f d/s." % (aa[i], dsa[i]))
             slewOutFile.write('%f, %f, %f' % (aa[i], ta[i], dsa[i]))
             i += 1
