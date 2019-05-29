@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 
 az = ktl.cache("dcs", "az")
 telstate = ktl.cache("dcs", "AXESTST")
-az.monitor()
 telstate.monitor()
 
 aa = []
@@ -20,16 +19,19 @@ def main():
     check = telstate.waitFor("=='SLEW'", timeout=1)
     if check == True:
         ts = time.time()
-        azs = az
-        print("Telescope slewing")
+        azs = float(az.read())
+        print("Telescope slewing!")
         telstate.waitFor("=='TRACK'")
         ta.append(time.time() - ts)
-        aa.append(abs(azs - az))
-        dsa.append(aa[i]/ta[i])
-        print("Slewed %f at %f d/s." % (aa[i], dsa[i]))
-        slewOutFile.write('%f, %f, %f' % (aa[i], ta[i], dsa[i]))
-        i += 1
-        print("Waiting for next slew...")
+        if ta[i] > 1:
+            aa.append(abs(azs - float(az.read())))
+            dsa.append(aa[i]/ta[i])
+            print("Slewed %f at %f d/s." % (aa[i], dsa[i]))
+            slewOutFile.write('%f, %f, %f\n' % (aa[i], ta[i], dsa[i]))
+            i += 1
+            print("Waiting for next slew...")
+        else:
+            print("Offset ignored.")
 
 
 if __name__ == '__main__':
@@ -43,7 +45,7 @@ if __name__ == '__main__':
         slewOutFile.close()
         dsAverage = np.mean(dsa)
         print("Slewed at an average of %f during tonight." % dsAverage)
-        plt.plot(aa, ta) 
+        plt.plot(aa, ta, '.') 
         plt.ylabel("Time of slew")
         plt.xlabel("Az distance slewed")
         plt.title("Slew distance vs time")
