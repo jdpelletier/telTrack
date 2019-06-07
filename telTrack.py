@@ -30,7 +30,7 @@ ca.monitor()
 ce.monitor()
 
 #Initialize arrays, variables
-castat = float(ca)
+castart = float(ca)
 cestart = float(ce)
 tsa = [] #time array for slews
 azst = [] #slew total az array
@@ -40,15 +40,18 @@ edps = [] #slew degrees/second el
 caa = [] #pointing ca array
 cae = [] #pointing ce array
 
+ava = 0
+eva = 0
+meanca = 0
+meance = 0
 event = 0
+eevent = 0
 ai = 0
 i = 0
-j = 0
 k = 0
 
 def slewTrack():
-    global i
-    check = telstate.waitFor("=='SLEW'", timeout=1)
+    global i, ava, eva
     if telstate == 'SLEW':
         ts = time.time()
         azstart = float(az)
@@ -56,17 +59,16 @@ def slewTrack():
         print("Telescope slewing!")
         telstate.waitFor("=='TRACK'")
         tsa.append(time.time() - ts) 
-        if tsa[i] > 1:
+        if abs((azstart - float(az)) or abs(elstart - float(el)))> 1:
             azst.append(abs(azstart - float(az)))
             elst.append(abs(elstart - float(el)))
             adps.append(azst[i]/tsa[i])
-            edps.append(ezst[i]/tsa[i])
+            edps.append(elst[i]/tsa[i])
             print("Slewed %f at %f d/s in AZ." % (azst[i], adps[i]))
             print("Slewed %f at %f d/s in EL." % (elst[i], edps[i]))
             i += 1
             ava = np.mean(adps)
             eva = np.mean(edps)
-            return ava, eva
         else:
             print("Offset ignored.")
 
@@ -82,10 +84,11 @@ def trackOutput(ee, ae, e, a, wind, ai):
 
 
 def errTrack():
-    global event
+    global eevent, event
     wind = False
     response = '(Type w and enter to mark as windshake)\a'
     while(abs(eerr) > 0.5 or abs(aerr) > 0.5):
+        eevent = 1
         if telstat != 'SLEW':
             trackOutput(eerr, aerr, el, az, wind, ai)
             print("Tracking errors are high! %s" % response)
@@ -101,21 +104,23 @@ def errTrack():
                 else:
                     wind = False
                     response = '(Type w and enter to mark as windshake)'
+    if eevent == 1:
+        event += 1
+        eevent = 0
 
-    event += 1
     return event
 
 def pointingTrack():
-    global j
+    global castart, cestart, meanca, meance
     if float(ca) != castart or float(ce) != cestart:
-        caa[j] = castart - float(ca)
-        cea[j] = ce start - float(ce)
+        caa.append(castart - float(ca))
+        cea.append(cestart - float(ce))
         castart = float(ca)
         cestart = float(ce)
-        j+=1
-        return np.mean(caa), np.mean(cea)
+        meanca = np.mean(caa)
+        meance = np.mean(cae)
 
-def main()
+def main():
     print(
     '''
     Starting Tel Track! This script will monitor telescope performance
@@ -128,18 +133,19 @@ def main()
     startTime = time.time()
     try:
         while True:
-            avazslew, avelslew = slewTrack()
+            slewTrack()
             errEvent = errTrack()
-            camean, cemean = pointingTrack()
+            pointingTrack()
             if (time.time() - startTime)%1800 == 0:
                updatetime = k*30
                print('Update after %d minutes:' % updatetime)
-               print('Average slew speed (AZ, EL): %f %f' % (avaslew, aveslew))
+               print('Average slew speed (AZ, EL): %f %f' % (ava, eva))
                print('Number of high tracking error events: %d' % errEvent)
                print('-----------------------------------------')
+               k+=1
 
     except KeyboardInterrupt:
-        print('Script ended. Final stats:')
+        print('\nScript ended. Final stats:')
         print('Average slew speed (AZ, EL): %f %f' % (avaslew, aveslew))
         print('Average pointing change (CA, CE): %f, %f' % (camean, cemean))
         print('Number of high tracking error events: %d' % errEvent)
