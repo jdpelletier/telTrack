@@ -2,9 +2,9 @@ import ktl
 import time
 import sys 
 import select
-import matplotlib.pyplot as plt 
-import numpy as np
-import csv 
+#import matplotlib.pyplot as plt 
+#import numpy as np
+#import csv 
 
 
 #Start monitoring
@@ -39,7 +39,7 @@ adps = [] #slew degrees/second az
 edps = [] #slew degrees/second el
 caa = [] #pointing ca array
 cae = [] #pointing ce array
-
+startTime = time.time()
 ava = 0
 eva = 0
 meanca = 0
@@ -48,7 +48,9 @@ event = 0
 eevent = 0
 ai = 0
 i = 0
-k = 0
+errBreak = 0
+
+trackOutFile = open('trackingoutput.txt', 'w+')
 
 def slewTrack():
     global i, ava, eva
@@ -67,8 +69,10 @@ def slewTrack():
             print("Slewed %f at %f d/s in AZ." % (azst[i], adps[i]))
             print("Slewed %f at %f d/s in EL." % (elst[i], edps[i]))
             i += 1
-            ava = np.mean(adps)
-            eva = np.mean(edps)
+            ava = 2.29*i
+            eva = 1.3*i
+ #           ava = np.mean(adps)
+ #           eva = np.mean(edps)
         else:
             print("Offset ignored.")
 
@@ -84,31 +88,41 @@ def trackOutput(ee, ae, e, a, wind, ai):
 
 
 def errTrack():
-    global eevent, event
+    global errBreak, eevent, event, ai
     wind = False
-    response = '(Type w and enter to mark as windshake)\a'
-    while(abs(eerr) > 0.5 or abs(aerr) > 0.5):
+    errBreak = 0
+    response = '\nTracking errors are high! (Type w and enter to mark as windshake)\a'
+    while(abs(eerr) > 0.5 or abs(aerr) > 0.5) and (errBreak == 0):
         eevent = 1
         if telstat != 'SLEW':
             trackOutput(eerr, aerr, el, az, wind, ai)
-            print("Tracking errors are high! %s" % response)
-            print("\n%f, %f" % (eerr, aerr))
-            sys.stdout.write('> ')
-            sys.stdout.flush()
+            if response != '':
+                print(response)
+                print("\n%f, %f" % (eerr, aerr))
+                sys.stdout.write('> ')
+                sys.stdout.flush()
             i, o, e = select.select([sys.stdin], [], [], 2)
             if (i):
                 if sys.stdin.readline().strip() == 'w':
                     wind = True
                     ai = abs(az - wdir)
-                    response = '(Marked as windshake, hit enter if not windshake)'
+                    print('Marked as windshake, hit enter if not windshake')
+                    response = ''
+                    sys.stdout.write('>')
+                    sys.stdout.flush()
                 else:
                     wind = False
-                    response = '(Type w and enter to mark as windshake)'
+                    response = 'Tracking errors are high! (Type w and enter to mark as windshake)'
+            if (time.time()-startTime)%10 == 0:
+                eevent = 0
+                errBreak = 1
+                break
+
     if eevent == 1:
         event += 1
         eevent = 0
+        print('Tracking errors back to nominal values.')
 
-    return event
 
 def pointingTrack():
     global castart, cestart, meanca, meance
@@ -117,10 +131,14 @@ def pointingTrack():
         cea.append(cestart - float(ce))
         castart = float(ca)
         cestart = float(ce)
-        meanca = np.mean(caa)
-        meance = np.mean(cae)
+        meanca = 0.4
+        meance = 102.2
+#        meanca = np.mean(caa)
+#        meance = np.mean(cae)
 
 def main():
+    global errBreak
+    k = 1
     print(
     '''
     Starting Tel Track! This script will monitor telescope performance
@@ -130,26 +148,25 @@ def main():
     An alarm will also sound if tracking errors are high.
     '''
     )
-    startTime = time.time()
     try:
         while True:
             slewTrack()
-            errEvent = errTrack()
+            errTrack()
             pointingTrack()
-            if (time.time() - startTime)%1800 == 0:
+            if ((time.time() - startTime)%10 == 0) or (errBreak == 1):
                updatetime = k*30
                print('Update after %d minutes:' % updatetime)
                print('Average slew speed (AZ, EL): %f %f' % (ava, eva))
-               print('Number of high tracking error events: %d' % errEvent)
+               print('Number of high tracking error events: %d' % event)
                print('-----------------------------------------')
                k+=1
 
     except KeyboardInterrupt:
         print('\nScript ended. Final stats:')
-        print('Average slew speed (AZ, EL): %f %f' % (avaslew, aveslew))
-        print('Average pointing change (CA, CE): %f, %f' % (camean, cemean))
-        print('Number of high tracking error events: %d' % errEvent)
-
+        print('Average slew speed (AZ, EL): %f %f' % (ava, eva))
+        print('Average pointing change (CA, CE): %f, %f' % (meanca, meance))
+        print('Number of high tracking error events: %d' % event)
+        trackOutFile.close()
 
 
 if __name__ == '__main__':
