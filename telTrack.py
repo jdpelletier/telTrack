@@ -4,7 +4,8 @@ import sys
 import select
 #import matplotlib.pyplot as plt 
 #import numpy as np
-#import csv 
+#import csv
+#from statistics import mean 
 
 
 #Start monitoring
@@ -51,6 +52,12 @@ i = 0
 errBreak = 0
 
 trackOutFile = open('trackingoutput.txt', 'w+')
+def mean(array):
+    sm = 0
+    for y in array:
+        sm += y
+    av = sm / len(array)
+    return av
 
 def slewTrack():
     global i, ava, eva
@@ -69,10 +76,8 @@ def slewTrack():
             print("Slewed %f at %f d/s in AZ." % (azst[i], adps[i]))
             print("Slewed %f at %f d/s in EL." % (elst[i], edps[i]))
             i += 1
-            ava = 2.29*i
-            eva = 1.3*i
- #           ava = np.mean(adps)
- #           eva = np.mean(edps)
+            ava = mean(adps)
+            eva = mean(edps)
         else:
             print("Offset ignored.")
 
@@ -88,13 +93,23 @@ def trackOutput(ee, ae, e, a, wind, ai):
 
 
 def errTrack():
-    global errBreak, eevent, event, ai
-    wind = False
-    errBreak = 0
-    response = '\nTracking errors are high! (Type w and enter to mark as windshake)\a'
+    global errBreak, eevent, event, ai, wind
+    if errBreak == 1 and wind == True:
+        response = ''
+        print('High errors marked as windshake, hit enter if not windshake')
+        sys.stdout.write('>')
+        sys.stdout.flush()
+        errBreak = 0
+        x = 0
+    else:
+        wind = False
+        x = 0
+        errBreak = 0
+        response = '\nTracking errors are high! (Type w and enter to mark as windshake)\a'
     while(abs(eerr) > 0.5 or abs(aerr) > 0.5) and (errBreak == 0):
         eevent = 1
         if telstat != 'SLEW':
+            x+=1
             trackOutput(eerr, aerr, el, az, wind, ai)
             if response != '':
                 print(response)
@@ -113,9 +128,10 @@ def errTrack():
                 else:
                     wind = False
                     response = 'Tracking errors are high! (Type w and enter to mark as windshake)'
-            if (time.time()-startTime)%10 == 0:
+            if x == 450:
                 eevent = 0
                 errBreak = 1
+                x = 0
                 break
 
     if eevent == 1:
@@ -131,10 +147,8 @@ def pointingTrack():
         cea.append(cestart - float(ce))
         castart = float(ca)
         cestart = float(ce)
-        meanca = 0.4
-        meance = 102.2
-#        meanca = np.mean(caa)
-#        meance = np.mean(cae)
+        meanca = mean(caa)
+        meance = mean(cae)
 
 def main():
     global errBreak
@@ -157,6 +171,7 @@ def main():
                updatetime = k*30
                print('Update after %d minutes:' % updatetime)
                print('Average slew speed (AZ, EL): %f %f' % (ava, eva))
+               print('Average pointing change (CA, CE): %f, %f' % (meanca, meance))
                print('Number of high tracking error events: %d' % event)
                print('-----------------------------------------')
                k+=1
