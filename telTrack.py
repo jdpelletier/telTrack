@@ -52,6 +52,9 @@ i = 0
 errBreak = 0
 
 trackOutFile = open('trackingoutput.txt', 'w+')
+slewOutFile = open('slewingoutput.txt', 'w+')
+pointingOutFile = open('pointingoutput.txt', 'w+')
+
 def mean(array):
     sm = 0
     for y in array:
@@ -67,8 +70,8 @@ def slewTrack():
         elstart = float(el)
         print("Telescope slewing!")
         telstate.waitFor("=='TRACK'")
-        tsa.append(time.time() - ts) 
         if abs((azstart - float(az)) or abs(elstart - float(el)))> 1:
+            tsa.append(time.time() - ts)
             azst.append(abs(azstart - float(az)))
             elst.append(abs(elstart - float(el)))
             adps.append(azst[i]/tsa[i])
@@ -78,6 +81,7 @@ def slewTrack():
             i += 1
             ava = mean(adps)
             eva = mean(edps)
+            slewOutFile.write('%f, %f, %f' % (azst[i], elst[i], tsa[i]))
         else:
             print("Offset ignored.")
 
@@ -110,7 +114,7 @@ def errTrack():
         eevent = 1
         if telstat != 'SLEW':
             x+=1
-            trackOutput(eerr, aerr, el, az, wind, ai)
+           # trackOutput(eerr, aerr, el, az, wind, ai) removing for daytime testing
             if response != '':
                 print(response)
                 print("\n%f, %f" % (eerr, aerr))
@@ -144,11 +148,12 @@ def pointingTrack():
     global castart, cestart, meanca, meance
     if float(ca) != castart or float(ce) != cestart:
         caa.append(castart - float(ca))
-        cea.append(cestart - float(ce))
+        cae.append(cestart - float(ce))
         castart = float(ca)
         cestart = float(ce)
         meanca = mean(caa)
         meance = mean(cae)
+        pointingOutFile.write('%f, %f' % (caa[i], cae[i]))
 
 def main():
     global errBreak
@@ -167,7 +172,7 @@ def main():
             slewTrack()
             errTrack()
             pointingTrack()
-            if ((time.time() - startTime)%10 == 0) or (errBreak == 1):
+            if ((time.time() - startTime)%1800 == 0) or (errBreak == 1):
                updatetime = k*30
                print('Update after %d minutes:' % updatetime)
                print('Average slew speed (AZ, EL): %f %f' % (ava, eva))
