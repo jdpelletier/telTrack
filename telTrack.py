@@ -49,6 +49,7 @@ event = 0
 eevent = 0
 ai = 0
 i = 0
+j = 0 
 errBreak = 0
 
 trackOutFile = open('trackingoutput.txt', 'w+')
@@ -78,10 +79,10 @@ def slewTrack():
             edps.append(elst[i]/tsa[i])
             print("Slewed %f at %f d/s in AZ." % (azst[i], adps[i]))
             print("Slewed %f at %f d/s in EL." % (elst[i], edps[i]))
+            slewOutFile.write('%f, %f, %f' % (azst[i], elst[i], tsa[i]))
             i += 1
             ava = mean(adps)
             eva = mean(edps)
-            slewOutFile.write('%f, %f, %f' % (azst[i], elst[i], tsa[i]))
         else:
             print("Offset ignored.")
 
@@ -145,7 +146,7 @@ def errTrack():
 
 
 def pointingTrack():
-    global castart, cestart, meanca, meance
+    global j, castart, cestart, meanca, meance
     if float(ca) != castart or float(ce) != cestart:
         caa.append(castart - float(ca))
         cae.append(cestart - float(ce))
@@ -154,6 +155,7 @@ def pointingTrack():
         meanca = mean(caa)
         meance = mean(cae)
         pointingOutFile.write('%f, %f' % (caa[i], cae[i]))
+        j++
 
 def main():
     global errBreak
