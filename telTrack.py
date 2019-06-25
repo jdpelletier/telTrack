@@ -193,8 +193,9 @@ def main():
         print('Average slew speed (AZ, EL): %f %f' % (azAverageSpeed, elAverageSpeed))
         print('Average pointing change (CA, CE): %f, %f' % (meanca, meance))
         print('Number of high tracking error events: %d' % event)
+        slewOutFile.close()
         trackOutFile.close()
-
+        pointingOutFile.close()
 
 if __name__ == '__main__':
     main()
