@@ -30,28 +30,6 @@ ce.monitor()
 windSpeed.monitor()
 windDir.monitor()
 
-#Initialize arrays, variables
-castart = float(ca)
-cestart = float(ce)
-slewTimes = [] #time array for slews
-azSlews = [] #slew total az array
-elSlews = [] #slew total el array
-azDegreesPerSecond = [] #slew degrees/second az
-elDegreesPerSecond = [] #slew degrees/second el
-caArray = [] #pointing ca array
-ceArray = [] #pointing ce array
-startTime = time.time()
-azAverageSpeed = 0
-elAverageSpeed = 0
-meanca = 0
-meance = 0
-event = 0
-eevent = 0
-windIncidenceAngle = 0
-i = 0
-j = 0 
-errBreak = 0
-
 now = datetime.datetime.now()
 path = "/home/k1obstcs/jptest/%s" % now.strftime("%Y-%m-%d")
 
@@ -69,8 +47,7 @@ def mean(array):
     average = total / len(array)
     return average
 
-def slewTrack():
-    global i, azAverageSpeed, elAverageSpeed
+def slewTrack(i, azAverageSpeed, elAverageSpeed):
     if telState == 'SLEW':
         startTime = time.time()
         azstart = float(az)
@@ -91,10 +68,10 @@ def slewTrack():
             elAverageSpeed = mean(elDegreesPerSecond)
         else:
             print("Offset ignored.")
+    return i, azAverageSpeed, elAverageSpeed
 
 
-def trackOutput(elerr, azerr, el, az, wind, windIncidenceAngle):
-    global windSpeed, startTime
+def trackOutput(elerr, azerr, el, az, wind, windIncidenceAngle, windSpeed, startTime):
     elapsedTime = time.time() - startTime
     if wind == True:
         trackOutFile.write('%f, %f, %f, %f, %s, %f, %f\n' % (elerr, azerr, el, az, elapsedTime, windSpeed, windIncidenceAngle))
@@ -103,8 +80,8 @@ def trackOutput(elerr, azerr, el, az, wind, windIncidenceAngle):
 
 
 
-def errTrack():
-    global errBreak, eevent, event, windIncidenceAngle, wind
+def errTrack(eevent, event, windIncidenceAngle, wind):
+    global errBreak
     if errBreak == 1 and wind == True:
         response = ''
         print('High errors marked as windshake, hit enter if not windshake')
@@ -121,7 +98,7 @@ def errTrack():
         eevent = 1
         if telState != 'SLEW':
             x+=1
-           # trackOutput(eerr, aerr, el, az, wind, windIncidenceAngle) removing for daytime testing
+           # trackOutput(eerr, aerr, el, az, wind, windIncidenceAngle, windSpeed, startTime) removing for daytime testing
             if response != '':
                 print(response)
                 print("\n%f, %f" % (elevationError, azimuthError))
@@ -151,8 +128,7 @@ def errTrack():
         print('Tracking errors back to nominal values.')
 
 
-def pointingTrack():
-    global j, castart, cestart, meanca, meance
+def pointingTrack(j, castart, cestart, meanca, meance):
     if float(ca) != castart or float(ce) != cestart:
         caArray.append(castart - float(ca))
         ceArray.append(cestart - float(ce))
@@ -165,6 +141,29 @@ def pointingTrack():
 
 def main():
     global errBreak
+    #Initialize arrays, variables
+    castart = float(ca)
+    cestart = float(ce)
+    slewTimes = [] #time array for slews
+    azSlews = [] #slew total az array
+    elSlews = [] #slew total el array
+    azDegreesPerSecond = [] #slew degrees/second az
+    elDegreesPerSecond = [] #slew degrees/second el
+    caArray = [] #pointing ca array
+    ceArray = [] #pointing ce array
+    startTime = time.time()
+    azAverageSpeed = 0 
+    elAverageSpeed = 0 
+    meanca = 0 
+    meance = 0 
+    event = 0 
+    eevent = 0
+    wind = False 
+    windIncidenceAngle = 0 
+    i = 0 
+    k = 1
+    j = 0 
+    errBreak = 0
     k = 1
     print(
     '''
@@ -177,9 +176,9 @@ def main():
     )
     try:
         while True:
-            slewTrack()
-            errTrack()
-            pointingTrack()
+            i, azAverageSpeed, elAverageSpeed = slewTrack(i, azAverageSpeed, elAverageSpeed)
+            eevent, event, windIncidenceAngle, wind = errTrack(eevent, event, windIncidenceAngle, wind)
+            j, castart, cestart, meanca, meance = pointingTrack(j, castart, cestart, meanca, meance)
             if ((time.time() - startTime)%1800 == 0) or (errBreak == 1):
                updatetime = k*30
                print('Update after %d minutes:' % updatetime)
