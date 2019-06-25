@@ -2,6 +2,8 @@ import ktl
 import time
 import sys 
 import select
+import os
+import datetime
 #import matplotlib.pyplot as plt 
 #import numpy as np
 #import csv
@@ -52,9 +54,15 @@ i = 0
 j = 0 
 errBreak = 0
 
-trackOutFile = open('trackingoutput.txt', 'w+')
-slewOutFile = open('slewingoutput.txt', 'w+')
-pointingOutFile = open('pointingoutput.txt', 'w+')
+now = datetime.datetime.now()
+path = "/home/k1obstcs/jptest/%s" % now.strftime("%Y-%m-%d")
+
+if not os.path.exists(path):
+    os.makedirs(path)
+
+trackOutFile = open('%s/trackingoutput.txt' % path, 'w+')
+slewOutFile = open('%s/slewingoutput.txt' % path, 'w+')
+pointingOutFile = open('%s/pointingoutput.txt' % path, 'w+')
 
 def mean(array):
     sm = 0
@@ -155,7 +163,7 @@ def pointingTrack():
         meanca = mean(caa)
         meance = mean(cae)
         pointingOutFile.write('%f, %f' % (caa[i], cae[i]))
-        j++
+        j+=1
 
 def main():
     global errBreak
