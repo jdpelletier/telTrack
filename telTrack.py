@@ -11,45 +11,43 @@ import datetime
 
 
 #Start monitoring
-telstate = ktl.cache("dcs", "AXESTST")
-el = ktl.cache("dcs", "el")
-az = ktl.cache("dcs", "az")
-eerr = ktl.cache("dcs", "elpe")
-aerr = ktl.cache("dcs", "azpe")
-telstat = ktl.cache("dcs", "AXESTST")
+telState = ktl.cache("dcs", "AXESTST")
+elevation = ktl.cache("dcs", "el")
+azimuth = ktl.cache("dcs", "az")
+elevationError = ktl.cache("dcs", "elpe")
+azimuthError = ktl.cache("dcs", "azpe")
 ca = ktl.cache("dcs", "CA")
 ce = ktl.cache("dcs", "CE")
-wspeed = ktl.cache("met", "WINDSPD")
-wdir = ktl.cache("met", "WINDDIR")
-telstate.monitor()
-el.monitor()
-az.monitor()
-eerr.monitor()
-aerr.monitor()
-telstat.monitor()
-wspeed.monitor()
-wdir.monitor()
+windSpeed = ktl.cache("met", "WINDSPD")
+windDir = ktl.cache("met", "WINDDIR")
+telState.monitor()
+elevation.monitor()
+azimuth.monitor()
+elevationError.monitor()
+azimuthError.monitor()
 ca.monitor()
 ce.monitor()
+windSpeed.monitor()
+windDir.monitor()
 
 #Initialize arrays, variables
 castart = float(ca)
 cestart = float(ce)
-tsa = [] #time array for slews
-azst = [] #slew total az array
-elst = [] #slew total el array
-adps = [] #slew degrees/second az
-edps = [] #slew degrees/second el
-caa = [] #pointing ca array
-cae = [] #pointing ce array
+slewTimes = [] #time array for slews
+azSlews = [] #slew total az array
+elSlews = [] #slew total el array
+azDegreesPerSecond = [] #slew degrees/second az
+elDegreesPerSecond = [] #slew degrees/second el
+caArray = [] #pointing ca array
+ceArray = [] #pointing ce array
 startTime = time.time()
-ava = 0
-eva = 0
+azAverageSpeed = 0
+elAverageSpeed = 0
 meanca = 0
 meance = 0
 event = 0
 eevent = 0
-ai = 0
+windIncidenceAngle = 0
 i = 0
 j = 0 
 errBreak = 0
@@ -65,48 +63,48 @@ slewOutFile = open('%s/slewingoutput.txt' % path, 'w+')
 pointingOutFile = open('%s/pointingoutput.txt' % path, 'w+')
 
 def mean(array):
-    sm = 0
+    total = 0
     for y in array:
-        sm += y
-    av = sm / len(array)
-    return av
+        total += y
+    average = total / len(array)
+    return average
 
 def slewTrack():
-    global i, ava, eva
-    if telstate == 'SLEW':
-        ts = time.time()
+    global i, azAverageSpeed, elAverageSpeed
+    if telState == 'SLEW':
+        startTime = time.time()
         azstart = float(az)
         elstart = float(el)
         print("Telescope slewing!")
-        telstate.waitFor("=='TRACK'")
+        telState.waitFor("=='TRACK'")
         if abs((azstart - float(az)) or abs(elstart - float(el)))> 1:
             tsa.append(time.time() - ts)
-            azst.append(abs(azstart - float(az)))
-            elst.append(abs(elstart - float(el)))
-            adps.append(azst[i]/tsa[i])
-            edps.append(elst[i]/tsa[i])
-            print("Slewed %f at %f d/s in AZ." % (azst[i], adps[i]))
-            print("Slewed %f at %f d/s in EL." % (elst[i], edps[i]))
-            slewOutFile.write('%f, %f, %f' % (azst[i], elst[i], tsa[i]))
+            azSlews.append(abs(azstart - float(az)))
+            elSlews.append(abs(elstart - float(el)))
+            azDegreesPerSecond.append(azSlews[i]/slewTimes[i])
+            elDegreesPerSecond.append(elSlews[i]/slewTimes[i])
+            print("Slewed %f at %f d/s in AZ." % (azSlews[i], azDegreesPerSecond[i]))
+            print("Slewed %f at %f d/s in EL." % (elSlews[i], elDegreesPerSecond[i]))
+            slewOutFile.write('%f, %f, %f' % (azSlews[i], elSlews[i], slewTimes[i]))
             i += 1
-            ava = mean(adps)
-            eva = mean(edps)
+            azAverageSpeed = mean(azDegreesPerSecond)
+            elAverageSpeed = mean(elDegreesPerSecond)
         else:
             print("Offset ignored.")
 
 
-def trackOutput(ee, ae, e, a, wind, ai):
-    global wspeed, startTime
-    etime = time.time() - startTime
+def trackOutput(elerr, azerr, el, az, wind, windIncidenceAngle):
+    global windSpeed, startTime
+    elapsedTime = time.time() - startTime
     if wind == True:
-        trackOutFile.write('%f, %f, %f, %f, %s, %f, %f\n' % (ee, ae, e, a, etime, wspeed, ai))
+        trackOutFile.write('%f, %f, %f, %f, %s, %f, %f\n' % (elerr, azerr, el, az, elapsedTime, windSpeed, windIncidenceAngle))
     else:
-        trackOutFile.write('%f, %f, %f, %f, %s\n' % (ee, ae, e, a, etime))
+        trackOutFile.write('%f, %f, %f, %f, %s\n' % (elerr, azerr, el, az, elapsedTime))
 
 
 
 def errTrack():
-    global errBreak, eevent, event, ai, wind
+    global errBreak, eevent, event, windIncidenceAngle, wind
     if errBreak == 1 and wind == True:
         response = ''
         print('High errors marked as windshake, hit enter if not windshake')
@@ -119,21 +117,21 @@ def errTrack():
         x = 0
         errBreak = 0
         response = '\nTracking errors are high! (Type w and enter to mark as windshake)\a'
-    while(abs(eerr) > 0.5 or abs(aerr) > 0.5) and (errBreak == 0):
+    while(abs(elevationError) > 0.5 or abs(azimuthError) > 0.5) and (errBreak == 0):
         eevent = 1
-        if telstat != 'SLEW':
+        if telState != 'SLEW':
             x+=1
-           # trackOutput(eerr, aerr, el, az, wind, ai) removing for daytime testing
+           # trackOutput(eerr, aerr, el, az, wind, windIncidenceAngle) removing for daytime testing
             if response != '':
                 print(response)
-                print("\n%f, %f" % (eerr, aerr))
+                print("\n%f, %f" % (elevationError, azimuthError))
                 sys.stdout.write('> ')
                 sys.stdout.flush()
             i, o, e = select.select([sys.stdin], [], [], 2)
             if (i):
                 if sys.stdin.readline().strip() == 'w':
                     wind = True
-                    ai = abs(az - wdir)
+                    windIncidenceAngle = abs(azimuth - windDir)
                     print('Marked as windshake, hit enter if not windshake')
                     response = ''
                     sys.stdout.write('>')
@@ -156,13 +154,13 @@ def errTrack():
 def pointingTrack():
     global j, castart, cestart, meanca, meance
     if float(ca) != castart or float(ce) != cestart:
-        caa.append(castart - float(ca))
-        cae.append(cestart - float(ce))
+        caArray.append(castart - float(ca))
+        ceArray.append(cestart - float(ce))
         castart = float(ca)
         cestart = float(ce)
-        meanca = mean(caa)
-        meance = mean(cae)
-        pointingOutFile.write('%f, %f' % (caa[i], cae[i]))
+        meanca = mean(caArray)
+        meance = mean(ceArray)
+        pointingOutFile.write('%f, %f' % (caArray[i], ceArray[i]))
         j+=1
 
 def main():
@@ -185,7 +183,7 @@ def main():
             if ((time.time() - startTime)%1800 == 0) or (errBreak == 1):
                updatetime = k*30
                print('Update after %d minutes:' % updatetime)
-               print('Average slew speed (AZ, EL): %f %f' % (ava, eva))
+               print('Average slew speed (AZ, EL): %f %f' % (azAverageSpeed, elAverageSpeed))
                print('Average pointing change (CA, CE): %f, %f' % (meanca, meance))
                print('Number of high tracking error events: %d' % event)
                print('-----------------------------------------')
@@ -193,7 +191,7 @@ def main():
 
     except KeyboardInterrupt:
         print('\nScript ended. Final stats:')
-        print('Average slew speed (AZ, EL): %f %f' % (ava, eva))
+        print('Average slew speed (AZ, EL): %f %f' % (azAverageSpeed, elAverageSpeed))
         print('Average pointing change (CA, CE): %f, %f' % (meanca, meance))
         print('Number of high tracking error events: %d' % event)
         trackOutFile.close()
