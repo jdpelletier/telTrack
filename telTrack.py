@@ -188,9 +188,7 @@ def main():
     try:
         while True:
             i, azAverageSpeed, elAverageSpeed = slewTrack(i, azAverageSpeed, elAverageSpeed)
-            lastevent = event
             event, wind, errBreak = errTrack(event, wind, errBreak)
-
             j, castart, cestart, meanca, meance = pointingTrack(j, castart, cestart, meanca, meance)
             if ((time.time() - startTime)%1800 == 0) or (errBreak == 1):
                updatetime = k*30
@@ -206,8 +204,9 @@ def main():
         print('Average slew speed (AZ, EL): %f %f' % (azAverageSpeed, elAverageSpeed))
         print('Average pointing change (CA, CE): %f, %f' % (meanca, meance))
         print('Number of high tracking error events: %d' % event)
+        slewOutFile.close()
         trackOutFile.close()
-
+        pointingOutFile.close()
 
 if __name__ == '__main__':
     main()
